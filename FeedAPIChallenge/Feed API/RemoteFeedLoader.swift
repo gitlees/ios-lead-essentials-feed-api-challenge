@@ -4,6 +4,17 @@
 
 import Foundation
 
+public struct FeedImageListRemote: Decodable {
+	public let items: [FeedImageRemote]
+}
+
+public struct FeedImageRemote: Decodable {
+	public let id: UUID
+	public let description: String?
+	public let location: String?
+	public let url: URL
+}
+
 public final class RemoteFeedLoader: FeedLoader {
 	private let url: URL
 	private let client: HTTPClient
@@ -19,16 +30,31 @@ public final class RemoteFeedLoader: FeedLoader {
 	}
 
 	public func load(completion: @escaping (FeedLoader.Result) -> Void) {
-		client.get(from: url) { result in
+		client.get(from: url) { [weak self] result in
 			switch result {
 			case .failure:
 				completion(.failure(Error.connectivity))
-			case let .success((_, response)):
-				if response.statusCode != 200 {
-					return completion(.failure(Error.invalidData))
+			case let .success((data, response)):
+				if let items = self?.mapFeedImageListRemote(data: data)?.items, response.statusCode == 200 {
+					completion(.success(items.asFeedImages))
+				} else {
+					completion(.failure(Error.invalidData))
 				}
-				completion(.failure(Error.invalidData))
 			}
 		}
+	}
+
+	private func mapFeedImageListRemote(data: Data) -> FeedImageListRemote? {
+		do {
+			return try JSONDecoder().decode(FeedImageListRemote.self, from: data)
+		} catch {
+			return nil
+		}
+	}
+}
+
+private extension Array where Element == FeedImageRemote {
+	var asFeedImages: [FeedImage] {
+		return map { FeedImage(id: $0.id, description: $0.description, location: $0.location, url: $0.url) }
 	}
 }
