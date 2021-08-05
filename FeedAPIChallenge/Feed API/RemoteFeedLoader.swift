@@ -9,10 +9,10 @@ public struct FeedImageListRemote: Decodable {
 }
 
 public struct FeedImageRemote: Decodable {
-	public let id: UUID
-	public let description: String?
-	public let location: String?
-	public let url: URL
+	public let imageId: UUID
+	public let imageDesc: String?
+	public let imageLoc: String?
+	public let imageUrl: URL
 }
 
 public final class RemoteFeedLoader: FeedLoader {
@@ -46,7 +46,9 @@ public final class RemoteFeedLoader: FeedLoader {
 
 	private func mapFeedImageListRemote(data: Data) -> FeedImageListRemote? {
 		do {
-			return try JSONDecoder().decode(FeedImageListRemote.self, from: data)
+			let decoder = JSONDecoder()
+			decoder.keyDecodingStrategy = .convertFromSnakeCase
+			return try decoder.decode(FeedImageListRemote.self, from: data)
 		} catch {
 			return nil
 		}
@@ -55,6 +57,6 @@ public final class RemoteFeedLoader: FeedLoader {
 
 private extension Array where Element == FeedImageRemote {
 	var asFeedImages: [FeedImage] {
-		return map { FeedImage(id: $0.id, description: $0.description, location: $0.location, url: $0.url) }
+		return map { FeedImage(id: $0.imageId, description: $0.imageDesc, location: $0.imageLoc, url: $0.imageUrl) }
 	}
 }
